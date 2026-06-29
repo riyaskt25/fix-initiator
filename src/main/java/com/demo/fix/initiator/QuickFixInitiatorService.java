@@ -1,8 +1,12 @@
 package com.demo.fix.initiator;
 
+import java.io.IOException;
 import java.nio.charset.StandardCharsets;
+import java.nio.file.FileVisitResult;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.nio.file.SimpleFileVisitor;
+import java.nio.file.attribute.BasicFileAttributes;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.util.Map;
@@ -84,11 +88,13 @@ public class QuickFixInitiatorService extends MessageCracker implements Applicat
 			return;
 		}
 
-		Path baseDirectory = Path.of("build", "fix");
-		Path storeDirectory = baseDirectory.resolve("initiator-store");
-		Path logDirectory = baseDirectory.resolve("initiator-log");
+		Path baseDirectory = Path.of("fix-runtime");
+		Path storeDirectory = baseDirectory.resolve("store");
+		Path logDirectory = baseDirectory.resolve("log");
 		Path settingsFile = baseDirectory.resolve("initiator.cfg");
 
+		deleteDirectory(storeDirectory);
+		deleteDirectory(logDirectory);
 		Files.createDirectories(storeDirectory);
 		Files.createDirectories(logDirectory);
 		Files.writeString(settingsFile, buildSettings(storeDirectory, logDirectory), StandardCharsets.UTF_8);
@@ -101,6 +107,25 @@ public class QuickFixInitiatorService extends MessageCracker implements Applicat
 		initiator = new SocketInitiator(this, messageStoreFactory, sessionSettings, logFactory, messageFactory);
 		initiator.start();
 		log.info("FIX initiator started, connecting to {}:{}", properties.getHost(), properties.getPort());
+	}
+
+	private void deleteDirectory(Path directory) throws IOException {
+		if (!Files.exists(directory)) {
+			return;
+		}
+		Files.walkFileTree(directory, new SimpleFileVisitor<>() {
+			@Override
+			public FileVisitResult visitFile(Path file, BasicFileAttributes attrs) throws IOException {
+				Files.delete(file);
+				return FileVisitResult.CONTINUE;
+			}
+
+			@Override
+			public FileVisitResult postVisitDirectory(Path dir, IOException exc) throws IOException {
+				Files.delete(dir);
+				return FileVisitResult.CONTINUE;
+			}
+		});
 	}
 
 	private String buildSettings(Path storeDirectory, Path logDirectory) {
