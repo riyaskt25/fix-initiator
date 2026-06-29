@@ -4,7 +4,7 @@ plugins {
 	id 'io.spring.dependency-management' version '1.1.7'
 }
 
-group = 'com.demo.fix.acceptor'
+group = 'com.demo.fix.initiator'
 version = '0.0.1-SNAPSHOT'
 
 java {
@@ -26,18 +26,11 @@ dependencies {
 }
 
 springBoot {
-	mainClass = 'com.demo.fix.acceptor.FixAcceptorApplication'
+	mainClass = 'com.demo.fix.initiator.FixInitiatorApplication'
 }
 
 tasks.named('test') {
 	useJUnitPlatform()
-}
-
-tasks.register('runAcceptor', JavaExec) {
-	group = 'application'
-	description = 'Run the FIX acceptor'
-	classpath = sourceSets.main.runtimeClasspath
-	mainClass = 'com.demo.fix.acceptor.FixAcceptorApplication'
 }
 
 tasks.register('runInitiator', JavaExec) {
@@ -45,5 +38,4 @@ tasks.register('runInitiator', JavaExec) {
 	description = 'Run the FIX initiator'
 	classpath = sourceSets.main.runtimeClasspath
 	mainClass = 'com.demo.fix.initiator.FixInitiatorApplication'
-	jvmArgs '-Dspring.application.name=fix-initiator'
 }
