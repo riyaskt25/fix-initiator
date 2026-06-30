@@ -2,6 +2,7 @@ package com.demo.fix.initiator.service;
 
 import java.time.LocalDateTime;
 import java.time.ZoneId;
+import java.util.UUID;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -31,13 +32,16 @@ public class OrderService {
 	private static final Logger log = LoggerFactory.getLogger(OrderService.class);
 
 	/**
-	 * Creates an Order domain object from a request.
+	 * Creates an Order domain object from a request with a unique ClOrdID.
+	 * Uses UUID to ensure uniqueness across restarts and across all sessions.
 	 */
 	public Order createOrder(
-			String clOrdId,
 			OrderRequest orderRequest,
 			String senderCompId,
 			String targetCompId) {
+		// Generate unique ClOrdID using UUID
+		String clOrdId = senderCompId + "-" + targetCompId + "-" + UUID.randomUUID().toString();
+		
 		return new Order(
 				clOrdId,
 				orderRequest.getSymbol(),

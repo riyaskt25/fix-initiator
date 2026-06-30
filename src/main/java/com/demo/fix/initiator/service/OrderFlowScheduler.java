@@ -61,9 +61,7 @@ public class OrderFlowScheduler {
 			}
 
 			try {
-				String clOrdId = sessionId.getSenderCompID() + "-" + sessionId.getTargetCompID() + "-" + currentOrderNumber;
 				Order order = orderService.createOrder(
-						clOrdId,
 						new com.demo.fix.initiator.domain.OrderRequest(
 								config.getSymbol(),
 								config.getSide(),

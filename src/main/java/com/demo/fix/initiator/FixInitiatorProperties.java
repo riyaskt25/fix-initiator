@@ -10,6 +10,7 @@ public class FixInitiatorProperties {
 
 	private int heartbeatIntervalSeconds = 30;
 	private int reconnectIntervalSeconds = 5;
+	private boolean resetStoreOnStart = false;
 	private List<SessionConfig> sessions = new ArrayList<>();
 
 	public int getHeartbeatIntervalSeconds() {
@@ -28,6 +29,14 @@ public class FixInitiatorProperties {
 		this.reconnectIntervalSeconds = reconnectIntervalSeconds;
 	}
 
+	public boolean isResetStoreOnStart() {
+		return resetStoreOnStart;
+	}
+
+	public void setResetStoreOnStart(boolean resetStoreOnStart) {
+		this.resetStoreOnStart = resetStoreOnStart;
+	}
+
 	public List<SessionConfig> getSessions() {
 		return sessions;
 	}
@@ -43,11 +52,6 @@ public class FixInitiatorProperties {
 		private String beginString = "FIX.4.4";
 		private String senderCompId = "INITIATOR";
 		private String targetCompId = "ACCEPTOR";
-		private int sendIntervalSeconds = 10;
-		private int sendDurationMinutes = 10;
-		private String symbol = "DEMO";
-		private int quantity = 100;
-		private String side = "BUY";
 
 		public String getHost() {
 			return host;
@@ -87,46 +91,6 @@ public class FixInitiatorProperties {
 
 		public void setTargetCompId(String targetCompId) {
 			this.targetCompId = targetCompId;
-		}
-
-		public int getSendIntervalSeconds() {
-			return sendIntervalSeconds;
-		}
-
-		public void setSendIntervalSeconds(int sendIntervalSeconds) {
-			this.sendIntervalSeconds = sendIntervalSeconds;
-		}
-
-		public int getSendDurationMinutes() {
-			return sendDurationMinutes;
-		}
-
-		public void setSendDurationMinutes(int sendDurationMinutes) {
-			this.sendDurationMinutes = sendDurationMinutes;
-		}
-
-		public String getSymbol() {
-			return symbol;
-		}
-
-		public void setSymbol(String symbol) {
-			this.symbol = symbol;
-		}
-
-		public int getQuantity() {
-			return quantity;
-		}
-
-		public void setQuantity(int quantity) {
-			this.quantity = quantity;
-		}
-
-		public String getSide() {
-			return side;
-		}
-
-		public void setSide(String side) {
-			this.side = side;
 		}
 	}
 }

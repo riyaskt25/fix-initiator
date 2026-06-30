@@ -2,12 +2,15 @@ package com.demo.fix.initiator.service;
 
 import java.util.List;
 
+import org.springframework.stereotype.Service;
+
 import com.demo.fix.initiator.FixInitiatorProperties;
 
 /**
  * Builds QFJ session settings configuration.
  * Extracts the settings generation logic from the main service.
  */
+@Service
 public class FixSettingsBuilder {
 
 	public String buildSettings(

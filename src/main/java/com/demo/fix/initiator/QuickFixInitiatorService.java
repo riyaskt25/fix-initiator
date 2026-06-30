@@ -8,10 +8,6 @@ import java.nio.file.Path;
 import java.nio.file.SimpleFileVisitor;
 import java.nio.file.attribute.BasicFileAttributes;
 import java.util.List;
-import java.util.concurrent.CountDownLatch;
-import java.util.concurrent.Executors;
-import java.util.concurrent.ScheduledExecutorService;
-import java.util.concurrent.ThreadFactory;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -36,8 +32,6 @@ import quickfix.SocketInitiator;
  * Delegates specific responsibilities to dedicated service classes:
  * - FixSessionManager: FIX protocol callbacks
  * - FixSettingsBuilder: Configuration file generation
- * - OrderFlowScheduler: Order flow management
- * - OrderService: Order creation and sending
  */
 @Component
 public class QuickFixInitiatorService implements ApplicationRunner, DisposableBean {
@@ -47,10 +41,8 @@ public class QuickFixInitiatorService implements ApplicationRunner, DisposableBe
 	private final FixInitiatorProperties properties;
 	private final FixSessionManager fixSessionManager;
 	private final FixSettingsBuilder settingsBuilder;
-	private final ScheduledExecutorService scheduler;
 
 	private volatile SocketInitiator initiator;
-	private volatile CountDownLatch completionLatch;
 
 	public QuickFixInitiatorService(
 			FixInitiatorProperties properties,
@@ -59,20 +51,14 @@ public class QuickFixInitiatorService implements ApplicationRunner, DisposableBe
 		this.properties = properties;
 		this.fixSessionManager = fixSessionManager;
 		this.settingsBuilder = settingsBuilder;
-		ThreadFactory threadFactory = runnable -> {
-			Thread thread = new Thread(runnable, "fix-initiator-scheduler");
-			thread.setDaemon(false);
-			return thread;
-		};
-		this.scheduler = Executors.newSingleThreadScheduledExecutor(threadFactory);
 	}
 
 	@Override
 	public void run(ApplicationArguments args) throws Exception {
 		start();
-		// Block the Spring application thread so the JVM stays alive while
-		// MINA / QFJ threads (which are daemon threads) are running.
-		completionLatch.await();
+		// Keep the JVM alive indefinitely to receive orders from acceptor
+		log.info("FIX initiator is running and waiting for orders from acceptor");
+		Thread.currentThread().join();
 	}
 
 	private synchronized void start() throws Exception {
@@ -90,8 +76,15 @@ public class QuickFixInitiatorService implements ApplicationRunner, DisposableBe
 		Path logDirectory = baseDirectory.resolve("log");
 		Path settingsFile = baseDirectory.resolve("initiator.cfg");
 
-		deleteDirectory(storeDirectory);
-		deleteDirectory(logDirectory);
+		// Only reset store if explicitly configured
+		if (properties.isResetStoreOnStart()) {
+			log.info("Resetting FIX store and logs as reset-store-on-start is enabled");
+			deleteDirectory(storeDirectory);
+			deleteDirectory(logDirectory);
+		} else {
+			log.info("Retaining FIX store for session recovery (reset-store-on-start=false)");
+		}
+
 		Files.createDirectories(storeDirectory);
 		Files.createDirectories(logDirectory);
 
@@ -108,9 +101,6 @@ public class QuickFixInitiatorService implements ApplicationRunner, DisposableBe
 		MessageStoreFactory messageStoreFactory = new FileStoreFactory(sessionSettings);
 		FileLogFactory logFactory = new FileLogFactory(sessionSettings);
 		MessageFactory messageFactory = new DefaultMessageFactory();
-
-		completionLatch = new CountDownLatch(sessions.size());
-		fixSessionManager.initialize(properties, scheduler, completionLatch);
 
 		initiator = new SocketInitiator(fixSessionManager, messageStoreFactory, sessionSettings, logFactory, messageFactory);
 		initiator.start();
@@ -136,31 +126,12 @@ public class QuickFixInitiatorService implements ApplicationRunner, DisposableBe
 		});
 	}
 
-	private String buildSettings(Path storeDirectory, Path logDirectory) {
-		// This method is now delegated to FixSettingsBuilder
-		// Keeping for backwards compatibility temporarily
-		return settingsBuilder.buildSettings(
-				properties.getHeartbeatIntervalSeconds(),
-				properties.getReconnectIntervalSeconds(),
-				storeDirectory.toAbsolutePath().toString(),
-				logDirectory.toAbsolutePath().toString(),
-				properties.getSessions());
-	}
-
 	@Override
 	public void destroy() {
 		SocketInitiator currentInitiator = initiator;
 		if (currentInitiator != null) {
 			currentInitiator.stop();
 			initiator = null;
-		}
-
-		scheduler.shutdownNow();
-		CountDownLatch latch = completionLatch;
-		if (latch != null) {
-			while (latch.getCount() > 0) {
-				latch.countDown();
-			}
 		}
 	}
 }
