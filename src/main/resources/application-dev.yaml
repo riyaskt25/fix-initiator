@@ -1,6 +1,6 @@
 fix:
   initiator:
-    reset-store-on-start: true
+    reset-store-on-start: false
     sessions:
       - host: 127.0.0.1
         port: 9878

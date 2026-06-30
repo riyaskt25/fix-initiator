@@ -135,13 +135,23 @@ public class QuickFixInitiatorService implements DisposableBean {
 		Files.walkFileTree(directory, new SimpleFileVisitor<>() {
 			@Override
 			public FileVisitResult visitFile(Path file, BasicFileAttributes attrs) throws IOException {
-				Files.delete(file);
+				try {
+					Files.delete(file);
+				} catch (IOException e) {
+					// File may be locked by another process on Windows
+					log.warn("Could not delete file {}: {}", file.getFileName(), e.getMessage());
+				}
 				return FileVisitResult.CONTINUE;
 			}
 
 			@Override
 			public FileVisitResult postVisitDirectory(Path dir, IOException exc) throws IOException {
-				Files.delete(dir);
+				try {
+					Files.delete(dir);
+				} catch (IOException e) {
+					// Directory may be locked
+					log.warn("Could not delete directory {}: {}", dir.getFileName(), e.getMessage());
+				}
 				return FileVisitResult.CONTINUE;
 			}
 		});
