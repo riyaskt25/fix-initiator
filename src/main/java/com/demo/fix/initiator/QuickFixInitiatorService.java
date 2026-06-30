@@ -9,6 +9,7 @@ import java.nio.file.SimpleFileVisitor;
 import java.nio.file.attribute.BasicFileAttributes;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
+import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CountDownLatch;
@@ -61,7 +62,7 @@ public class QuickFixInitiatorService extends MessageCracker implements Applicat
 	private final FixInitiatorProperties properties;
 	private final ScheduledExecutorService scheduler;
 	private final Map<SessionID, OrderFlow> orderFlows = new ConcurrentHashMap<>();
-	private final CountDownLatch completionLatch = new CountDownLatch(1);
+	private volatile CountDownLatch completionLatch;
 
 	private volatile SocketInitiator initiator;
 
@@ -88,6 +89,11 @@ public class QuickFixInitiatorService extends MessageCracker implements Applicat
 			return;
 		}
 
+		List<FixInitiatorProperties.SessionConfig> sessions = properties.getSessions();
+		if (sessions == null || sessions.isEmpty()) {
+			throw new IllegalStateException("No FIX sessions configured under fix.initiator.sessions");
+		}
+
 		Path baseDirectory = Path.of("fix-runtime");
 		Path storeDirectory = baseDirectory.resolve("store");
 		Path logDirectory = baseDirectory.resolve("log");
@@ -104,9 +110,10 @@ public class QuickFixInitiatorService extends MessageCracker implements Applicat
 		FileLogFactory logFactory = new FileLogFactory(sessionSettings);
 		MessageFactory messageFactory = new DefaultMessageFactory();
 
+		completionLatch = new CountDownLatch(sessions.size());
 		initiator = new SocketInitiator(this, messageStoreFactory, sessionSettings, logFactory, messageFactory);
 		initiator.start();
-		log.info("FIX initiator started, connecting to {}:{}", properties.getHost(), properties.getPort());
+		log.info("FIX initiator started with {} session(s)", sessions.size());
 	}
 
 	private void deleteDirectory(Path directory) throws IOException {
@@ -129,32 +136,40 @@ public class QuickFixInitiatorService extends MessageCracker implements Applicat
 	}
 
 	private String buildSettings(Path storeDirectory, Path logDirectory) {
-		return """
+		StringBuilder sb = new StringBuilder();
+		sb.append("""
 				[DEFAULT]
 				ConnectionType=initiator
 				HeartBtInt=%d
-				ReconnectInterval=5
+				ReconnectInterval=%d
 				FileStorePath=%s
 				FileLogPath=%s
 				StartTime=00:00:00
 				EndTime=23:59:59
 				UseDataDictionary=N
-
-				[SESSION]
-				BeginString=%s
-				SenderCompID=%s
-				TargetCompID=%s
-				SocketConnectHost=%s
-				SocketConnectPort=%d
 				""".formatted(
 				properties.getHeartbeatIntervalSeconds(),
+				properties.getReconnectIntervalSeconds(),
 				storeDirectory.toAbsolutePath(),
-				logDirectory.toAbsolutePath(),
-				properties.getBeginString(),
-				properties.getSenderCompId(),
-				properties.getTargetCompId(),
-				properties.getHost(),
-				properties.getPort());
+				logDirectory.toAbsolutePath()));
+
+		for (FixInitiatorProperties.SessionConfig session : properties.getSessions()) {
+			sb.append("""
+
+					[SESSION]
+					BeginString=%s
+					SenderCompID=%s
+					TargetCompID=%s
+					SocketConnectHost=%s
+					SocketConnectPort=%d
+					""".formatted(
+					session.getBeginString(),
+					session.getSenderCompId(),
+					session.getTargetCompId(),
+					session.getHost(),
+					session.getPort()));
+		}
+		return sb.toString();
 	}
 
 	@Override
@@ -169,7 +184,12 @@ public class QuickFixInitiatorService extends MessageCracker implements Applicat
 		}
 
 		scheduler.shutdownNow();
-		completionLatch.countDown();
+		CountDownLatch latch = completionLatch;
+		if (latch != null) {
+			while (latch.getCount() > 0) {
+				latch.countDown();
+			}
+		}
 	}
 
 	@Override
@@ -180,7 +200,7 @@ public class QuickFixInitiatorService extends MessageCracker implements Applicat
 	@Override
 	public void onLogon(SessionID sessionId) {
 		log.info("FIX initiator logon: {}", sessionId);
-		orderFlows.computeIfAbsent(sessionId, this::startOrderFlow);
+		orderFlows.computeIfAbsent(sessionId, id -> startOrderFlow(id, findSessionConfig(id)));
 	}
 
 	@Override
@@ -214,10 +234,19 @@ public class QuickFixInitiatorService extends MessageCracker implements Applicat
 		log.info("Initiator received from {}: {}", sessionId, message);
 	}
 
-	private OrderFlow startOrderFlow(SessionID sessionId) {
+	private FixInitiatorProperties.SessionConfig findSessionConfig(SessionID sessionId) {
+		return properties.getSessions().stream()
+				.filter(s -> s.getSenderCompId().equals(sessionId.getSenderCompID())
+						&& s.getTargetCompId().equals(sessionId.getTargetCompID()))
+				.findFirst()
+				.orElseThrow(() -> new IllegalStateException(
+						"No session config found for " + sessionId));
+	}
+
+	private OrderFlow startOrderFlow(SessionID sessionId, FixInitiatorProperties.SessionConfig config) {
 		OrderFlow orderFlow = new OrderFlow(sessionId);
-		long intervalSeconds = Math.max(1, properties.getSendIntervalSeconds());
-		long totalRuns = Math.max(1L, (properties.getSendDurationMinutes() * 60L) / intervalSeconds);
+		long intervalSeconds = Math.max(1, config.getSendIntervalSeconds());
+		long totalRuns = Math.max(1L, (config.getSendDurationMinutes() * 60L) / intervalSeconds);
 		AtomicReference<ScheduledFuture<?>> futureReference = new AtomicReference<>();
 
 		ScheduledFuture<?> future = scheduler.scheduleAtFixedRate(() -> {
@@ -232,7 +261,7 @@ public class QuickFixInitiatorService extends MessageCracker implements Applicat
 			}
 
 			try {
-				sendOrder(sessionId, currentOrderNumber);
+				sendOrder(sessionId, currentOrderNumber, config);
 				log.info("Initiator sent order {} of {} to {}", currentOrderNumber, totalRuns, sessionId);
 			} catch (Exception exception) {
 				log.error("Initiator failed to send order {} to {}", currentOrderNumber, sessionId, exception);
@@ -254,16 +283,16 @@ public class QuickFixInitiatorService extends MessageCracker implements Applicat
 		return orderFlow;
 	}
 
-	private void sendOrder(SessionID sessionId, int currentOrderNumber) throws Exception {
+	private void sendOrder(SessionID sessionId, int currentOrderNumber, FixInitiatorProperties.SessionConfig config) throws Exception {
 		String clOrdId = sessionId.getSenderCompID() + "-" + sessionId.getTargetCompID() + "-" + currentOrderNumber;
 		NewOrderSingle order = new NewOrderSingle(
 				new ClOrdID(clOrdId),
-				new Side(resolveSide(properties.getSide())),
+				new Side(resolveSide(config.getSide())),
 				new TransactTime(LocalDateTime.now(ZoneId.systemDefault())),
 				new OrdType(OrdType.MARKET));
 		order.set(new HandlInst(HandlInst.AUTOMATED_EXECUTION_ORDER_PUBLIC_BROKER_INTERVENTION_OK));
-		order.set(new Symbol(properties.getSymbol()));
-		order.set(new OrderQty(properties.getQuantity()));
+		order.set(new Symbol(config.getSymbol()));
+		order.set(new OrderQty(config.getQuantity()));
 
 		Session.sendToTarget(order, sessionId);
 	}

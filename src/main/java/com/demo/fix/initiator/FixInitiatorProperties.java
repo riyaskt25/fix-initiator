@@ -1,61 +1,16 @@
 package com.demo.fix.initiator;
 
+import java.util.ArrayList;
+import java.util.List;
+
 import org.springframework.boot.context.properties.ConfigurationProperties;
 
 @ConfigurationProperties(prefix = "fix.initiator")
 public class FixInitiatorProperties {
 
-	private String host = "127.0.0.1";
-	private int port = 9878;
-	private String beginString = "FIX.4.4";
-	private String senderCompId = "INITIATOR";
-	private String targetCompId = "ACCEPTOR";
 	private int heartbeatIntervalSeconds = 30;
-	private int sendIntervalSeconds = 10;
-	private int sendDurationMinutes = 10;
-	private String symbol = "DEMO";
-	private int quantity = 100;
-	private String side = "BUY";
-
-	public String getHost() {
-		return host;
-	}
-
-	public void setHost(String host) {
-		this.host = host;
-	}
-
-	public int getPort() {
-		return port;
-	}
-
-	public void setPort(int port) {
-		this.port = port;
-	}
-
-	public String getBeginString() {
-		return beginString;
-	}
-
-	public void setBeginString(String beginString) {
-		this.beginString = beginString;
-	}
-
-	public String getSenderCompId() {
-		return senderCompId;
-	}
-
-	public void setSenderCompId(String senderCompId) {
-		this.senderCompId = senderCompId;
-	}
-
-	public String getTargetCompId() {
-		return targetCompId;
-	}
-
-	public void setTargetCompId(String targetCompId) {
-		this.targetCompId = targetCompId;
-	}
+	private int reconnectIntervalSeconds = 5;
+	private List<SessionConfig> sessions = new ArrayList<>();
 
 	public int getHeartbeatIntervalSeconds() {
 		return heartbeatIntervalSeconds;
@@ -65,43 +20,113 @@ public class FixInitiatorProperties {
 		this.heartbeatIntervalSeconds = heartbeatIntervalSeconds;
 	}
 
-	public int getSendIntervalSeconds() {
-		return sendIntervalSeconds;
+	public int getReconnectIntervalSeconds() {
+		return reconnectIntervalSeconds;
 	}
 
-	public void setSendIntervalSeconds(int sendIntervalSeconds) {
-		this.sendIntervalSeconds = sendIntervalSeconds;
+	public void setReconnectIntervalSeconds(int reconnectIntervalSeconds) {
+		this.reconnectIntervalSeconds = reconnectIntervalSeconds;
 	}
 
-	public int getSendDurationMinutes() {
-		return sendDurationMinutes;
+	public List<SessionConfig> getSessions() {
+		return sessions;
 	}
 
-	public void setSendDurationMinutes(int sendDurationMinutes) {
-		this.sendDurationMinutes = sendDurationMinutes;
+	public void setSessions(List<SessionConfig> sessions) {
+		this.sessions = sessions;
 	}
 
-	public String getSymbol() {
-		return symbol;
-	}
+	public static class SessionConfig {
 
-	public void setSymbol(String symbol) {
-		this.symbol = symbol;
-	}
+		private String host = "127.0.0.1";
+		private int port = 9878;
+		private String beginString = "FIX.4.4";
+		private String senderCompId = "INITIATOR";
+		private String targetCompId = "ACCEPTOR";
+		private int sendIntervalSeconds = 10;
+		private int sendDurationMinutes = 10;
+		private String symbol = "DEMO";
+		private int quantity = 100;
+		private String side = "BUY";
 
-	public int getQuantity() {
-		return quantity;
-	}
+		public String getHost() {
+			return host;
+		}
 
-	public void setQuantity(int quantity) {
-		this.quantity = quantity;
-	}
+		public void setHost(String host) {
+			this.host = host;
+		}
 
-	public String getSide() {
-		return side;
-	}
+		public int getPort() {
+			return port;
+		}
 
-	public void setSide(String side) {
-		this.side = side;
+		public void setPort(int port) {
+			this.port = port;
+		}
+
+		public String getBeginString() {
+			return beginString;
+		}
+
+		public void setBeginString(String beginString) {
+			this.beginString = beginString;
+		}
+
+		public String getSenderCompId() {
+			return senderCompId;
+		}
+
+		public void setSenderCompId(String senderCompId) {
+			this.senderCompId = senderCompId;
+		}
+
+		public String getTargetCompId() {
+			return targetCompId;
+		}
+
+		public void setTargetCompId(String targetCompId) {
+			this.targetCompId = targetCompId;
+		}
+
+		public int getSendIntervalSeconds() {
+			return sendIntervalSeconds;
+		}
+
+		public void setSendIntervalSeconds(int sendIntervalSeconds) {
+			this.sendIntervalSeconds = sendIntervalSeconds;
+		}
+
+		public int getSendDurationMinutes() {
+			return sendDurationMinutes;
+		}
+
+		public void setSendDurationMinutes(int sendDurationMinutes) {
+			this.sendDurationMinutes = sendDurationMinutes;
+		}
+
+		public String getSymbol() {
+			return symbol;
+		}
+
+		public void setSymbol(String symbol) {
+			this.symbol = symbol;
+		}
+
+		public int getQuantity() {
+			return quantity;
+		}
+
+		public void setQuantity(int quantity) {
+			this.quantity = quantity;
+		}
+
+		public String getSide() {
+			return side;
+		}
+
+		public void setSide(String side) {
+			this.side = side;
+		}
 	}
 }
