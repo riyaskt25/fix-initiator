@@ -37,6 +37,11 @@ public class FixInitiatorLifecycle implements SmartLifecycle {
 			fixInitiatorService.start();
 			running = true;
 			log.info("FIX initiator lifecycle started successfully");
+		} catch (IllegalStateException e) {
+			// No sessions configured - log warning but allow app to start
+			// Sessions can be configured via environment, REST endpoints, or later dynamically
+			log.warn("FIX initiator not starting: {}", e.getMessage());
+			running = false;
 		} catch (Exception e) {
 			log.error("Failed to start FIX initiator", e);
 			running = false;

@@ -1,0 +1,96 @@
+﻿> Task :compileJava UP-TO-DATE
+> Task :processResources UP-TO-DATE
+> Task :classes UP-TO-DATE
+> Task :resolveMainClassName UP-TO-DATE
+
+> Task :bootRun FAILED
+
+  .   ____          _            __ _ _
+ /\\ / ___'_ __ _ _(_)_ __  __ _ \ \ \ \
+( ( )\___ | '_ | '_| | '_ \/ _` | \ \ \ \
+ \\/  ___)| |_)| | | | | || (_| |  ) ) ) )
+  '  |____| .__|_| |_|_| |_\__, | / / / /
+ =========|_|==============|___/=/_/_/_/
+
+ :: Spring Boot ::                (v4.1.0)
+
+2026-06-30T18:43:33.874+05:30  INFO 32168 --- [fix-initiator] [           main] c.d.f.initiator.FixInitiatorApplication  : Starting FixInitiatorApplication using Java 21.0.2 with PID 32168 (C:\Users\riyas\Desktop\fix\fix-initiator\build\classes\java\main started by riyas in C:\Users\riyas\Desktop\fix\fix-initiator)
+2026-06-30T18:43:33.874+05:30  INFO 32168 --- [fix-initiator] [           main] c.d.f.initiator.FixInitiatorApplication  : No active profile set, falling back to 1 default profile: "default"
+2026-06-30T18:43:34.402+05:30  INFO 32168 --- [fix-initiator] [           main] c.d.f.i.service.FixInitiatorLifecycle    : Starting FIX initiator lifecycle...
+2026-06-30T18:43:34.402+05:30 ERROR 32168 --- [fix-initiator] [           main] c.d.f.i.service.FixInitiatorLifecycle    : Failed to start FIX initiator
+
+java.lang.IllegalStateException: No FIX sessions configured under fix.initiator.sessions
+	at com.demo.fix.initiator.QuickFixInitiatorService.startInternal(QuickFixInitiatorService.java:92) ~[main/:na]
+	at com.demo.fix.initiator.QuickFixInitiatorService.start(QuickFixInitiatorService.java:67) ~[main/:na]
+	at com.demo.fix.initiator.service.FixInitiatorLifecycle.start(FixInitiatorLifecycle.java:37) ~[main/:na]
+	at org.springframework.context.support.DefaultLifecycleProcessor.doStart(DefaultLifecycleProcessor.java:420) ~[spring-context-7.0.8.jar:7.0.8]
+	at org.springframework.context.support.DefaultLifecycleProcessor.doStart(DefaultLifecycleProcessor.java:409) ~[spring-context-7.0.8.jar:7.0.8]
+	at org.springframework.context.support.DefaultLifecycleProcessor$LifecycleGroup.start(DefaultLifecycleProcessor.java:613) ~[spring-context-7.0.8.jar:7.0.8]
+	at java.base/java.lang.Iterable.forEach(Iterable.java:75) ~[na:na]
+	at org.springframework.context.support.DefaultLifecycleProcessor.startBeans(DefaultLifecycleProcessor.java:379) ~[spring-context-7.0.8.jar:7.0.8]
+	at org.springframework.context.support.DefaultLifecycleProcessor.onRefresh(DefaultLifecycleProcessor.java:306) ~[spring-context-7.0.8.jar:7.0.8]
+	at org.springframework.context.support.AbstractApplicationContext.finishRefresh(AbstractApplicationContext.java:1013) ~[spring-context-7.0.8.jar:7.0.8]
+	at org.springframework.context.support.AbstractApplicationContext.refresh(AbstractApplicationContext.java:624) ~[spring-context-7.0.8.jar:7.0.8]
+	at org.springframework.boot.SpringApplication.refresh(SpringApplication.java:756) ~[spring-boot-4.1.0.jar:4.1.0]
+	at org.springframework.boot.SpringApplication.refreshContext(SpringApplication.java:445) ~[spring-boot-4.1.0.jar:4.1.0]
+	at org.springframework.boot.SpringApplication.run(SpringApplication.java:321) ~[spring-boot-4.1.0.jar:4.1.0]
+	at org.springframework.boot.SpringApplication.run(SpringApplication.java:1365) ~[spring-boot-4.1.0.jar:4.1.0]
+	at org.springframework.boot.SpringApplication.run(SpringApplication.java:1354) ~[spring-boot-4.1.0.jar:4.1.0]
+	at com.demo.fix.initiator.FixInitiatorApplication.main(FixInitiatorApplication.java:12) ~[main/:na]
+
+2026-06-30T18:43:34.420+05:30  WARN 32168 --- [fix-initiator] [           main] s.c.a.AnnotationConfigApplicationContext : Exception encountered during context initialization - cancelling refresh attempt: org.springframework.context.ApplicationContextException: Failed to start bean 'fixInitiatorLifecycle'
+2026-06-30T18:43:34.420+05:30  INFO 32168 --- [fix-initiator] [           main] c.d.f.i.QuickFixInitiatorService         : Initiating FIX initiator shutdown...
+2026-06-30T18:43:34.420+05:30  INFO 32168 --- [fix-initiator] [           main] .s.b.a.l.ConditionEvaluationReportLogger : 
+
+Error starting ApplicationContext. To display the condition evaluation report re-run your application with 'debug' enabled.
+2026-06-30T18:43:34.441+05:30 ERROR 32168 --- [fix-initiator] [           main] o.s.boot.SpringApplication               : Application run failed
+
+org.springframework.context.ApplicationContextException: Failed to start bean 'fixInitiatorLifecycle'
+	at org.springframework.context.support.DefaultLifecycleProcessor.doStart(DefaultLifecycleProcessor.java:423) ~[spring-context-7.0.8.jar:7.0.8]
+	at org.springframework.context.support.DefaultLifecycleProcessor.doStart(DefaultLifecycleProcessor.java:409) ~[spring-context-7.0.8.jar:7.0.8]
+	at org.springframework.context.support.DefaultLifecycleProcessor$LifecycleGroup.start(DefaultLifecycleProcessor.java:613) ~[spring-context-7.0.8.jar:7.0.8]
+	at java.base/java.lang.Iterable.forEach(Iterable.java:75) ~[na:na]
+	at org.springframework.context.support.DefaultLifecycleProcessor.startBeans(DefaultLifecycleProcessor.java:379) ~[spring-context-7.0.8.jar:7.0.8]
+	at org.springframework.context.support.DefaultLifecycleProcessor.onRefresh(DefaultLifecycleProcessor.java:306) ~[spring-context-7.0.8.jar:7.0.8]
+	at org.springframework.context.support.AbstractApplicationContext.finishRefresh(AbstractApplicationContext.java:1013) ~[spring-context-7.0.8.jar:7.0.8]
+	at org.springframework.context.support.AbstractApplicationContext.refresh(AbstractApplicationContext.java:624) ~[spring-context-7.0.8.jar:7.0.8]
+	at org.springframework.boot.SpringApplication.refresh(SpringApplication.java:756) ~[spring-boot-4.1.0.jar:4.1.0]
+	at org.springframework.boot.SpringApplication.refreshContext(SpringApplication.java:445) ~[spring-boot-4.1.0.jar:4.1.0]
+	at org.springframework.boot.SpringApplication.run(SpringApplication.java:321) ~[spring-boot-4.1.0.jar:4.1.0]
+	at org.springframework.boot.SpringApplication.run(SpringApplication.java:1365) ~[spring-boot-4.1.0.jar:4.1.0]
+	at org.springframework.boot.SpringApplication.run(SpringApplication.java:1354) ~[spring-boot-4.1.0.jar:4.1.0]
+	at com.demo.fix.initiator.FixInitiatorApplication.main(FixInitiatorApplication.java:12) ~[main/:na]
+Caused by: java.lang.RuntimeException: FIX initiator startup failed
+	at com.demo.fix.initiator.service.FixInitiatorLifecycle.start(FixInitiatorLifecycle.java:43) ~[main/:na]
+	at org.springframework.context.support.DefaultLifecycleProcessor.doStart(DefaultLifecycleProcessor.java:420) ~[spring-context-7.0.8.jar:7.0.8]
+	... 13 common frames omitted
+Caused by: java.lang.IllegalStateException: No FIX sessions configured under fix.initiator.sessions
+	at com.demo.fix.initiator.QuickFixInitiatorService.startInternal(QuickFixInitiatorService.java:92) ~[main/:na]
+	at com.demo.fix.initiator.QuickFixInitiatorService.start(QuickFixInitiatorService.java:67) ~[main/:na]
+	at com.demo.fix.initiator.service.FixInitiatorLifecycle.start(FixInitiatorLifecycle.java:37) ~[main/:na]
+	... 14 common frames omitted
+
+./gradlew : 
+At line:1 char:1
++ ./gradlew bootRun 2>&1 | Out-File -FilePath app-error.log -Encoding U ...
++ ~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: (:String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+FAILURE: Build failed with an exception.
+
+* What went wrong:
+Execution failed for task ':bootRun' (registered by plugin 
+'org.springframework.boot').
+> Process 'command 'C:\Program Files\Java\jdk-21\bin\java.exe'' finished with 
+non-zero exit value 1
+
+* Try:
+> Run with --stacktrace option to get the stack trace.
+> Run with --info or --debug option to get more log output.
+> Run with --scan to get full insights from a Build Scan (powered by 
+Develocity).
+> Get more help at https://help.gradle.org.
+
+4 actionable tasks: 1 executed, 3 up-to-date
+BUILD FAILED in 3s
