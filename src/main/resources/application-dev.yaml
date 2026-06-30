@@ -12,7 +12,7 @@ fix:
         quantity: 100
         side: BUY
       - host: 127.0.0.1
-        port: 9879
+        port: 9878
         begin-string: FIX.4.4
         sender-comp-id: INITIATOR2
         target-comp-id: ACCEPTOR
