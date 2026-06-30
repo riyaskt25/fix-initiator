@@ -12,8 +12,6 @@ import java.util.List;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.DisposableBean;
-import org.springframework.boot.ApplicationArguments;
-import org.springframework.boot.ApplicationRunner;
 import org.springframework.stereotype.Component;
 
 import com.demo.fix.initiator.service.FixSessionManager;
@@ -29,12 +27,15 @@ import quickfix.SocketInitiator;
 
 /**
  * Orchestrates FIX initiator startup and shutdown.
+ * Lifecycle is managed by FixInitiatorLifecycle (SmartLifecycle).
+ * This service handles the actual FIX connection and message handling.
+ * 
  * Delegates specific responsibilities to dedicated service classes:
  * - FixSessionManager: FIX protocol callbacks
  * - FixSettingsBuilder: Configuration file generation
  */
 @Component
-public class QuickFixInitiatorService implements ApplicationRunner, DisposableBean {
+public class QuickFixInitiatorService implements DisposableBean {
 
 	private static final Logger log = LoggerFactory.getLogger(QuickFixInitiatorService.class);
 
@@ -53,15 +54,35 @@ public class QuickFixInitiatorService implements ApplicationRunner, DisposableBe
 		this.settingsBuilder = settingsBuilder;
 	}
 
-	@Override
-	public void run(ApplicationArguments args) throws Exception {
-		start();
-		// Keep the JVM alive indefinitely to receive orders from acceptor
-		log.info("FIX initiator is running and waiting for orders from acceptor");
-		Thread.currentThread().join();
+	/**
+	 * Starts the FIX initiator.
+	 * Called by FixInitiatorLifecycle during Spring context startup.
+	 */
+	public void start() throws Exception {
+		synchronized (this) {
+			if (initiator != null) {
+				log.warn("FIX initiator already started");
+				return;
+			}
+			startInternal();
+		}
 	}
 
-	private synchronized void start() throws Exception {
+	/**
+	 * Shuts down the FIX initiator gracefully.
+	 * Called by FixInitiatorLifecycle during Spring context shutdown or by DisposableBean.
+	 */
+	public void shutdown() throws Exception {
+		log.info("Initiating FIX initiator shutdown...");
+		SocketInitiator currentInitiator = initiator;
+		if (currentInitiator != null) {
+			currentInitiator.stop();
+			initiator = null;
+			log.info("FIX initiator stopped successfully");
+		}
+	}
+
+	private synchronized void startInternal() throws Exception {
 		if (initiator != null) {
 			return;
 		}
@@ -127,11 +148,9 @@ public class QuickFixInitiatorService implements ApplicationRunner, DisposableBe
 	}
 
 	@Override
-	public void destroy() {
-		SocketInitiator currentInitiator = initiator;
-		if (currentInitiator != null) {
-			currentInitiator.stop();
-			initiator = null;
-		}
+	public void destroy() throws Exception {
+		// Backup shutdown mechanism (DisposableBean interface)
+		// Primary shutdown is handled by FixInitiatorLifecycle
+		shutdown();
 	}
 }
