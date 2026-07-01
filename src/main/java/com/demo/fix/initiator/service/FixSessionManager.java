@@ -23,8 +23,10 @@ import quickfix.UnsupportedMessageType;
 public class FixSessionManager extends MessageCracker implements Application {
 
 	private static final Logger log = LoggerFactory.getLogger(FixSessionManager.class);
+	private final FixMessagePublicationService publicationService;
 
-	public FixSessionManager() {
+	public FixSessionManager(FixMessagePublicationService publicationService) {
+		this.publicationService = publicationService;
 	}
 
 	@Override
@@ -62,6 +64,6 @@ public class FixSessionManager extends MessageCracker implements Application {
 	public void fromApp(Message message, SessionID sessionId)
 			throws FieldNotFound, IncorrectDataFormat, IncorrectTagValue, UnsupportedMessageType {
 		log.info("Received order from {}: {}", sessionId, message);
-		// TODO: Implement business logic to process the incoming order
+		publicationService.publish(message, sessionId);
 	}
 }
