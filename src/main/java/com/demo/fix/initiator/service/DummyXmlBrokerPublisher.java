@@ -24,6 +24,7 @@ public class DummyXmlBrokerPublisher {
 			String xml = xmlMessageSerializer.toXml(payload);
 			log.info("Dummy MQ publish session={} type={} xml=\n{}", fields.sessionKey(), fields.messageType(), xml);
 		} catch (JsonProcessingException e) {
+			log.error("Error while building xml content",e);
 			throw new IllegalStateException("Failed to serialize FIX payload to XML", e);
 		}
 	}
