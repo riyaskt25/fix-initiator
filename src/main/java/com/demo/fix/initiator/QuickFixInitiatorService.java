@@ -12,6 +12,7 @@ import java.util.List;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.DisposableBean;
+import org.springframework.core.io.ClassPathResource;
 import org.springframework.stereotype.Component;
 
 import com.demo.fix.initiator.service.FixSessionManager;
@@ -95,6 +96,8 @@ public class QuickFixInitiatorService implements DisposableBean {
 		Path baseDirectory = Path.of("fix-runtime");
 		Path storeDirectory = baseDirectory.resolve("store");
 		Path logDirectory = baseDirectory.resolve("log");
+		Path dictionaryDirectory = baseDirectory.resolve("dictionary");
+		Path dictionaryFile = dictionaryDirectory.resolve(properties.getDataDictionaryResource());
 		Path settingsFile = baseDirectory.resolve("initiator.cfg");
 
 		// Only reset store if explicitly configured
@@ -108,6 +111,8 @@ public class QuickFixInitiatorService implements DisposableBean {
 
 		Files.createDirectories(storeDirectory);
 		Files.createDirectories(logDirectory);
+		Files.createDirectories(dictionaryDirectory);
+		copyResourceToFile(properties.getDataDictionaryResource(), dictionaryFile);
 
 		// Build settings using the dedicated builder
 		String settings = settingsBuilder.buildSettings(
@@ -115,6 +120,7 @@ public class QuickFixInitiatorService implements DisposableBean {
 				properties.getReconnectIntervalSeconds(),
 				storeDirectory.toAbsolutePath().toString(),
 				logDirectory.toAbsolutePath().toString(),
+				dictionaryFile.toAbsolutePath().toString(),
 				sessions);
 		Files.writeString(settingsFile, settings, StandardCharsets.UTF_8);
 
@@ -126,6 +132,14 @@ public class QuickFixInitiatorService implements DisposableBean {
 		initiator = new SocketInitiator(fixSessionManager, messageStoreFactory, sessionSettings, logFactory, messageFactory);
 		initiator.start();
 		log.info("FIX initiator started with {} session(s)", sessions.size());
+	}
+
+	private void copyResourceToFile(String resourceName, Path targetFile) throws IOException {
+		ClassPathResource resource = new ClassPathResource(resourceName);
+		if (!resource.exists()) {
+			throw new IllegalStateException("FIX data dictionary resource not found on classpath: " + resourceName);
+		}
+		Files.copy(resource.getInputStream(), targetFile, java.nio.file.StandardCopyOption.REPLACE_EXISTING);
 	}
 
 	private void deleteDirectory(Path directory) throws IOException {

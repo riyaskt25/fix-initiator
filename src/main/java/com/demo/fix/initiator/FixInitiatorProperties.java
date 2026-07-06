@@ -11,6 +11,7 @@ public class FixInitiatorProperties {
 	private int heartbeatIntervalSeconds = 30;
 	private int reconnectIntervalSeconds = 5;
 	private boolean resetStoreOnStart = false;
+	private String dataDictionaryResource = "FIX44-Bloomberg.xml";
 	private List<SessionConfig> sessions = new ArrayList<>();
 
 	public int getHeartbeatIntervalSeconds() {
@@ -35,6 +36,14 @@ public class FixInitiatorProperties {
 
 	public void setResetStoreOnStart(boolean resetStoreOnStart) {
 		this.resetStoreOnStart = resetStoreOnStart;
+	}
+
+	public String getDataDictionaryResource() {
+		return dataDictionaryResource;
+	}
+
+	public void setDataDictionaryResource(String dataDictionaryResource) {
+		this.dataDictionaryResource = dataDictionaryResource;
 	}
 
 	public List<SessionConfig> getSessions() {

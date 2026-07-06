@@ -7,6 +7,7 @@ fix:
     heartbeat-interval-seconds: 30
     reconnect-interval-seconds: 5
     reset-store-on-start: false
+    data-dictionary-resource: FIX44.xml
     # Session configuration for connecting to FIX acceptor
     # The initiator will receive orders from the acceptor
     # 

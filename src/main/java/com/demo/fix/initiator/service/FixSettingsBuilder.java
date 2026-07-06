@@ -18,6 +18,7 @@ public class FixSettingsBuilder {
 			int reconnectIntervalSeconds,
 			String storeDirectoryPath,
 			String logDirectoryPath,
+			String dataDictionaryPath,
 			List<FixInitiatorProperties.SessionConfig> sessions) {
 
 		StringBuilder sb = new StringBuilder();
@@ -28,6 +29,7 @@ public class FixSettingsBuilder {
 				ReconnectInterval=%d
 				FileStorePath=%s
 				FileLogPath=%s
+				DataDictionary=%s
 				StartTime=00:00:00
 				EndTime=23:59:59
 				UseDataDictionary=Y
@@ -35,7 +37,8 @@ public class FixSettingsBuilder {
 				heartbeatIntervalSeconds,
 				reconnectIntervalSeconds,
 				storeDirectoryPath,
-				logDirectoryPath));
+				logDirectoryPath,
+				dataDictionaryPath));
 
 		for (FixInitiatorProperties.SessionConfig session : sessions) {
 			sb.append("""
