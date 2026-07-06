@@ -52,7 +52,7 @@ public class FixMessageFieldExtractor {
 
 	private String sanitizeXmlText(String value) {
 		if (value == null) {
-			return null;
+			return null;	
 		}
 		// Replace XML-invalid control chars (including FIX SOH \u0001) with a readable delimiter.
 		return value.replaceAll("[\\u0000-\\u0008\\u000B\\u000C\\u000E-\\u001F]", "|");

@@ -4,6 +4,8 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 
+import com.demo.fix.initiator.exception.FixIntegrationException;
+
 import quickfix.Application;
 import quickfix.FieldNotFound;
 import quickfix.IncorrectDataFormat;
@@ -13,6 +15,7 @@ import quickfix.MessageCracker;
 import quickfix.RejectLogon;
 import quickfix.SessionID;
 import quickfix.UnsupportedMessageType;
+import quickfix.fix44.NewOrderSingle;
 
 /**
  * Handles FIX protocol callbacks and session lifecycle.
@@ -63,7 +66,22 @@ public class FixSessionManager extends MessageCracker implements Application {
 	@Override
 	public void fromApp(Message message, SessionID sessionId)
 			throws FieldNotFound, IncorrectDataFormat, IncorrectTagValue, UnsupportedMessageType {
-		log.info("Received order from {}: {}", sessionId, message);
-		publicationService.publish(message, sessionId);
+		try {
+			log.info("Received order from {}: {}", sessionId, message);
+			publicationService.publish(message, sessionId);
+		} catch (FixIntegrationException ex) {
+			log.error("Fix message coversion integration failed", ex);
+			// send business reject if appropriate
+			// persist to DLQ/database
+			// alert monitoring
+		} catch (Exception ex) {
+			log.error("Unexpected error", ex);
+			// persist to DLQ/database
+			// alert monitoring
+		}
 	}
+
+	
+
+
 }
