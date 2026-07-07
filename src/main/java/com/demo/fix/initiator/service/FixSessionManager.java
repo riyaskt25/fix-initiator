@@ -15,7 +15,6 @@ import quickfix.MessageCracker;
 import quickfix.RejectLogon;
 import quickfix.SessionID;
 import quickfix.UnsupportedMessageType;
-import quickfix.fix44.NewOrderSingle;
 
 /**
  * Handles FIX protocol callbacks and session lifecycle.

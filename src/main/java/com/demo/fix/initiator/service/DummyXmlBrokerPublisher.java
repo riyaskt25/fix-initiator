@@ -4,28 +4,37 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
+import com.demo.fix.initiator.service.xml.GenericFixXmlSerializer;
 
-import com.demo.fix.initiator.message.FixMessageFields;
+import quickfix.FieldNotFound;
+import quickfix.Message;
+import quickfix.SessionID;
 
 @Service
 public class DummyXmlBrokerPublisher {
 
 	private static final Logger log = LoggerFactory.getLogger(DummyXmlBrokerPublisher.class);
 
-	private final XmlMessageSerializer xmlMessageSerializer;
+	private final GenericFixXmlSerializer xmlSerializer;
 
-	public DummyXmlBrokerPublisher(XmlMessageSerializer xmlMessageSerializer) {
-		this.xmlMessageSerializer = xmlMessageSerializer;
+	public DummyXmlBrokerPublisher(GenericFixXmlSerializer xmlSerializer) {
+		this.xmlSerializer = xmlSerializer;
 	}
 
-	public void publish(FixMessageFields fields, Object payload) {
+	public void publish(SessionID sessionId, Message message) {
+		String messageType = readHeaderField(message, 35);
+		String xml = xmlSerializer.serialize(message);
+		log.info("Dummy MQ publish session={} type={} xml=\n{}", sessionId, messageType, xml);
+	}
+
+	private String readHeaderField(Message message, int tag) {
+		if (!message.getHeader().isSetField(tag)) {
+			return "UNKNOWN";
+		}
 		try {
-			String xml = xmlMessageSerializer.toXml(payload);
-			log.info("Dummy MQ publish session={} type={} xml=\n{}", fields.sessionKey(), fields.messageType(), xml);
-		} catch (JsonProcessingException e) {
-			log.error("Error while building xml content",e);
-			throw new IllegalStateException("Failed to serialize FIX payload to XML", e);
+			return message.getHeader().getString(tag);
+		} catch (FieldNotFound e) {
+			return "UNKNOWN";
 		}
 	}
 }

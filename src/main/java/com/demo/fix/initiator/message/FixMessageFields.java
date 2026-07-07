@@ -7,9 +7,12 @@ package com.demo.fix.initiator.message;
 public record FixMessageFields(
 		String sessionKey,
 		String beginString,
+		String bodyLength,
+		String msgSeqNum,
 		String senderCompId,
 		String targetCompId,
 		String messageType,
+		String sendingTime,
 		String rawFix,
 		String clOrdId,
 		String orderId,
