@@ -16,4 +16,9 @@ Spring Boot FIX initiator built on QuickFIX/J.
 ## Notes
 
 - XML output is generated with JDK StAX (`XMLStreamWriter`) and not Jackson XML.
-- The legacy MapStruct/Jackson mapper DTO pipeline has been removed as unused.
+
+## Java Compatibility
+
+- Project source/target compatibility is set to Java 8.
+- Spring Boot version is pinned to 2.7.x for Java 8 support.
+- Gradle wrapper is pinned to 6.9.4 so builds can run on Java 8 machines.

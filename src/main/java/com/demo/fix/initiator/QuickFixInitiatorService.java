@@ -4,6 +4,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.nio.file.StandardCopyOption;
 import java.util.Iterator;
 import java.util.LinkedHashSet;
@@ -111,7 +112,7 @@ public class QuickFixInitiatorService implements DisposableBean {
 	 * 2. initiator.cfg from the classpath (bundled default)
 	 */
 	private SessionSettings loadSessionSettings() throws ConfigError, IOException {
-		Path externalCfg = Path.of(SETTINGS_FILENAME);
+		Path externalCfg = Paths.get(SETTINGS_FILENAME);
 		if (Files.exists(externalCfg)) {
 			log.info("Loading FIX settings from external file: {}", externalCfg.toAbsolutePath());
 			return new SessionSettings(externalCfg.toString());
@@ -172,7 +173,7 @@ public class QuickFixInitiatorService implements DisposableBean {
 		}
 
 		for (String dictPath : dictionaryPaths) {
-			Path dictFile = Path.of(dictPath);
+			Path dictFile = Paths.get(dictPath);
 			if (Files.exists(dictFile)) {
 				log.debug("Dictionary already present at {}", dictFile.toAbsolutePath());
 				continue;
