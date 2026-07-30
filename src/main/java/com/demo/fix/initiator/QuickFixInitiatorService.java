@@ -1,58 +1,55 @@
 package com.demo.fix.initiator;
 
 import java.io.IOException;
-import java.nio.charset.StandardCharsets;
-import java.nio.file.FileVisitResult;
+import java.io.InputStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.nio.file.SimpleFileVisitor;
-import java.nio.file.attribute.BasicFileAttributes;
-import java.util.List;
+import java.nio.file.StandardCopyOption;
+import java.util.Iterator;
+import java.util.LinkedHashSet;
+import java.util.Set;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.DisposableBean;
-import org.springframework.core.io.ClassPathResource;
 import org.springframework.stereotype.Component;
 
 import com.demo.fix.initiator.service.FixSessionManager;
-import com.demo.fix.initiator.service.FixSettingsBuilder;
 
+import quickfix.ConfigError;
 import quickfix.DefaultMessageFactory;
 import quickfix.FileLogFactory;
 import quickfix.FileStoreFactory;
 import quickfix.MessageFactory;
 import quickfix.MessageStoreFactory;
+import quickfix.SessionID;
 import quickfix.SessionSettings;
 import quickfix.SocketInitiator;
 
 /**
  * Orchestrates FIX initiator startup and shutdown.
  * Lifecycle is managed by FixInitiatorLifecycle (SmartLifecycle).
- * This service handles the actual FIX connection and message handling.
- * 
- * Delegates specific responsibilities to dedicated service classes:
- * - FixSessionManager: FIX protocol callbacks
- * - FixSettingsBuilder: Configuration file generation
+ *
+ * Settings file resolution (priority order):
+ *   1. initiator.cfg in the JVM working directory (next to the running jar)
+ *   2. initiator.cfg on the classpath (src/main/resources/initiator.cfg)
+ *
+ * DataDictionary files referenced in the config are automatically extracted
+ * from the classpath to the path specified in each [SESSION] block,
+ * so placing dictionary XML files in src/main/resources/ is sufficient.
  */
 @Component
 public class QuickFixInitiatorService implements DisposableBean {
 
 	private static final Logger log = LoggerFactory.getLogger(QuickFixInitiatorService.class);
+	private static final String SETTINGS_FILENAME = "initiator.cfg";
+	private static final String DATA_DICTIONARY_KEY = "DataDictionary";
 
-	private final FixInitiatorProperties properties;
 	private final FixSessionManager fixSessionManager;
-	private final FixSettingsBuilder settingsBuilder;
-
 	private volatile SocketInitiator initiator;
 
-	public QuickFixInitiatorService(
-			FixInitiatorProperties properties,
-			FixSessionManager fixSessionManager,
-			FixSettingsBuilder settingsBuilder) {
-		this.properties = properties;
+	public QuickFixInitiatorService(FixSessionManager fixSessionManager) {
 		this.fixSessionManager = fixSessionManager;
-		this.settingsBuilder = settingsBuilder;
 	}
 
 	/**
@@ -88,87 +85,84 @@ public class QuickFixInitiatorService implements DisposableBean {
 			return;
 		}
 
-		List<FixInitiatorProperties.SessionConfig> sessions = properties.getSessions();
-		if (sessions == null || sessions.isEmpty()) {
-			throw new IllegalStateException("No FIX sessions configured under fix.initiator.sessions");
-		}
+		SessionSettings sessionSettings = loadSessionSettings();
+		extractDictionaries(sessionSettings);
 
-		Path baseDirectory = Path.of("fix-runtime");
-		Path storeDirectory = baseDirectory.resolve("store");
-		Path logDirectory = baseDirectory.resolve("log");
-		Path dictionaryDirectory = baseDirectory.resolve("dictionary");
-		Path dictionaryFile = dictionaryDirectory.resolve(properties.getDataDictionaryResource());
-		Path settingsFile = baseDirectory.resolve("initiator.cfg");
-
-		// Only reset store if explicitly configured
-		if (properties.isResetStoreOnStart()) {
-			log.info("Resetting FIX store and logs as reset-store-on-start is enabled");
-			deleteDirectory(storeDirectory);
-			deleteDirectory(logDirectory);
-		} else {
-			log.info("Retaining FIX store for session recovery (reset-store-on-start=false)");
-		}
-
-		Files.createDirectories(storeDirectory);
-		Files.createDirectories(logDirectory);
-		Files.createDirectories(dictionaryDirectory);
-		copyResourceToFile(properties.getDataDictionaryResource(), dictionaryFile);
-
-		// Build settings using the dedicated builder
-		String settings = settingsBuilder.buildSettings(
-				properties.getHeartbeatIntervalSeconds(),
-				properties.getReconnectIntervalSeconds(),
-				storeDirectory.toAbsolutePath().toString(),
-				logDirectory.toAbsolutePath().toString(),
-				dictionaryFile.toAbsolutePath().toString(),
-				sessions);
-		Files.writeString(settingsFile, settings, StandardCharsets.UTF_8);
-
-		SessionSettings sessionSettings = new SessionSettings(settingsFile.toString());
 		MessageStoreFactory messageStoreFactory = new FileStoreFactory(sessionSettings);
 		FileLogFactory logFactory = new FileLogFactory(sessionSettings);
 		MessageFactory messageFactory = new DefaultMessageFactory();
 
 		initiator = new SocketInitiator(fixSessionManager, messageStoreFactory, sessionSettings, logFactory, messageFactory);
 		initiator.start();
-		log.info("FIX initiator started with {} session(s)", sessions.size());
+		int sessionCount = 0;
+		Iterator<SessionID> counter = sessionSettings.sectionIterator();
+		while (counter.hasNext()) { counter.next(); sessionCount++; }
+		log.info("FIX initiator started with {} session(s)", sessionCount);
 	}
 
-	private void copyResourceToFile(String resourceName, Path targetFile) throws IOException {
-		ClassPathResource resource = new ClassPathResource(resourceName);
-		if (!resource.exists()) {
-			throw new IllegalStateException("FIX data dictionary resource not found on classpath: " + resourceName);
+	/**
+	 * Loads SessionSettings using a two-step priority:
+	 * 1. initiator.cfg in the JVM working directory (external override)
+	 * 2. initiator.cfg from the classpath (bundled default)
+	 */
+	private SessionSettings loadSessionSettings() throws ConfigError, IOException {
+		Path externalCfg = Path.of(SETTINGS_FILENAME);
+		if (Files.exists(externalCfg)) {
+			log.info("Loading FIX settings from external file: {}", externalCfg.toAbsolutePath());
+			return new SessionSettings(externalCfg.toString());
 		}
-		Files.copy(resource.getInputStream(), targetFile, java.nio.file.StandardCopyOption.REPLACE_EXISTING);
+		log.info("No external {} found in working directory — loading from classpath", SETTINGS_FILENAME);
+		try (InputStream is = getClass().getClassLoader().getResourceAsStream(SETTINGS_FILENAME)) {
+			if (is == null) {
+				throw new IllegalStateException(
+						"No FIX settings file found. Place initiator.cfg next to the jar "
+								+ "or add it to src/main/resources/");
+			}
+			return new SessionSettings(is);
+		}
 	}
 
-	private void deleteDirectory(Path directory) throws IOException {
-		if (!Files.exists(directory)) {
-			return;
+	/**
+	 * For every DataDictionary path declared in the loaded session settings,
+	 * extracts the corresponding XML file from the classpath if it does not
+	 * already exist on disk. This allows dictionary files to be bundled inside
+	 * the jar (src/main/resources/) and still be referenced by the cfg file
+	 * using a plain file path.
+	 */
+	private void extractDictionaries(SessionSettings sessionSettings) throws IOException {
+		Set<String> dictionaryPaths = new LinkedHashSet<>();
+		Iterator<SessionID> sessions = sessionSettings.sectionIterator();
+		while (sessions.hasNext()) {
+			SessionID sessionId = sessions.next();
+			try {
+				String path = sessionSettings.getString(sessionId, DATA_DICTIONARY_KEY);
+				if (path != null && !path.isBlank()) {
+					dictionaryPaths.add(path);
+				}
+			} catch (ConfigError e) {
+				// DataDictionary not set for this session — skip
+			}
 		}
-		Files.walkFileTree(directory, new SimpleFileVisitor<>() {
-			@Override
-			public FileVisitResult visitFile(Path file, BasicFileAttributes attrs) throws IOException {
-				try {
-					Files.delete(file);
-				} catch (IOException e) {
-					// File may be locked by another process on Windows
-					log.warn("Could not delete file {}: {}", file.getFileName(), e.getMessage());
-				}
-				return FileVisitResult.CONTINUE;
-			}
 
-			@Override
-			public FileVisitResult postVisitDirectory(Path dir, IOException exc) throws IOException {
-				try {
-					Files.delete(dir);
-				} catch (IOException e) {
-					// Directory may be locked
-					log.warn("Could not delete directory {}: {}", dir.getFileName(), e.getMessage());
-				}
-				return FileVisitResult.CONTINUE;
+		for (String dictPath : dictionaryPaths) {
+			Path dictFile = Path.of(dictPath);
+			if (Files.exists(dictFile)) {
+				log.debug("Dictionary already present at {}", dictFile.toAbsolutePath());
+				continue;
 			}
-		});
+			String resourceName = dictFile.getFileName().toString();
+			try (InputStream is = getClass().getClassLoader().getResourceAsStream(resourceName)) {
+				if (is == null) {
+					throw new IllegalStateException(
+							"Dictionary '" + resourceName + "' not found on classpath. "
+									+ "Add it to src/main/resources/ or place the file at: "
+									+ dictFile.toAbsolutePath());
+				}
+				Files.createDirectories(dictFile.getParent());
+				Files.copy(is, dictFile, StandardCopyOption.REPLACE_EXISTING);
+				log.info("Extracted dictionary {} from classpath to {}", resourceName, dictFile.toAbsolutePath());
+			}
+		}
 	}
 
 	@Override

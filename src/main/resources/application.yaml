@@ -4,23 +4,7 @@ spring:
 
 fix:
   initiator:
-    heartbeat-interval-seconds: 30
-    reconnect-interval-seconds: 5
-    reset-store-on-start: false
+    # Classpath resource name of the FIX data dictionary used for XML field-name resolution.
+    # Must match a file present in src/main/resources/.
+    # Session configuration (sessions, host, port, heartbeat, etc.) lives in initiator.cfg.
     data-dictionary-resource: FIX44.xml
-    # Session configuration for connecting to FIX acceptor
-    # The initiator will receive orders from the acceptor
-    # 
-    # To run with dev sessions: gradle bootRun --args='--spring.profiles.active=dev'
-    # Or configure sessions here for production
-    sessions:
-      - host: 127.0.0.1
-        port: 9878
-        begin-string: FIX.4.4
-        sender-comp-id: INITIATOR1
-        target-comp-id: ACCEPTOR
-      - host: 127.0.0.1
-        port: 9878
-        begin-string: FIX.4.4
-        sender-comp-id: INITIATOR2
-        target-comp-id: ACCEPTOR

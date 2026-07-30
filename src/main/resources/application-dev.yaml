@@ -1,15 +1,4 @@
-fix:
-  initiator:
-    reset-store-on-start: false
-    data-dictionary-resource: FIX44.xml
-    sessions:
-      - host: 127.0.0.1
-        port: 9878
-        begin-string: FIX.4.4
-        sender-comp-id: INITIATOR1
-        target-comp-id: ACCEPTOR
-      - host: 127.0.0.1
-        port: 9878
-        begin-string: FIX.4.4
-        sender-comp-id: INITIATOR2
-        target-comp-id: ACCEPTOR
+# Dev profile overrides.
+# Session configuration is in initiator.cfg (working directory or classpath).
+# Place a custom initiator.cfg next to the jar (or project root for gradlew bootRun)
+# to override the bundled default without rebuilding.
