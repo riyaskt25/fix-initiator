@@ -28,11 +28,4 @@ public class KeepAliveRunner implements ApplicationRunner {
 		// Block indefinitely - the app will only exit via SIGTERM or exception
 		keepAlive.await();
 	}
-
-	/**
-	 * Graceful shutdown signal (called by shutdown hooks during SIGTERM)
-	 */
-	public static void shutdown() {
-		keepAlive.countDown();
-	}
 }
