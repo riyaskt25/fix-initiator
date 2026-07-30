@@ -1,10 +1,3 @@
 spring:
   application:
     name: fix-initiator
-
-fix:
-  initiator:
-    # Classpath resource name of the FIX data dictionary used for XML field-name resolution.
-    # Must match a file present in src/main/resources/.
-    # Session configuration (sessions, host, port, heartbeat, etc.) lives in initiator.cfg.
-    data-dictionary-resource: FIX44.xml

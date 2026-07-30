@@ -1,39 +1,27 @@
 package com.demo.fix.initiator.service.xml;
 
-import java.io.IOException;
-
-import org.springframework.core.io.ClassPathResource;
 import org.springframework.stereotype.Component;
 
-import com.demo.fix.initiator.FixInitiatorProperties;
-
-import quickfix.ConfigError;
 import quickfix.DataDictionary;
 
+/**
+ * Resolves a FIX tag number to a human-readable XML element name using the
+ * DataDictionary that belongs to the session that produced the message.
+ * Stateless — the DataDictionary is supplied per call, not stored.
+ */
 @Component
 public class FieldNameResolver {
 
-	private final DataDictionary dataDictionary;
-
-	public FieldNameResolver(FixInitiatorProperties properties) {
-		try {
-			ClassPathResource resource = new ClassPathResource(properties.getDataDictionaryResource());
-			this.dataDictionary = new DataDictionary(resource.getInputStream());
-		} catch (IOException | ConfigError e) {
-			throw new IllegalStateException("Unable to load FIX dictionary for field name resolution", e);
-		}
-	}
-
-	public String resolve(int tag) {
-		String name = dataDictionary.getFieldName(tag);
-		if (name == null || name.isBlank()) {
+	/**
+	 * Returns the field name for the given tag from the supplied dictionary,
+	 * or "Tag{n}" if the dictionary is null or the tag is not defined.
+	 */
+	public String resolve(int tag, DataDictionary dictionary) {
+		if (dictionary == null) {
 			return "Tag" + tag;
 		}
-		return sanitizeElementName(name);
-	}
-
-	public DataDictionary getDataDictionary() {
-		return dataDictionary;
+		String name = dictionary.getFieldName(tag);
+		return (name == null || name.isBlank()) ? "Tag" + tag : sanitizeElementName(name);
 	}
 
 	private String sanitizeElementName(String value) {

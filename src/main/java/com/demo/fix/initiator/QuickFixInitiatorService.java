@@ -15,8 +15,10 @@ import org.springframework.beans.factory.DisposableBean;
 import org.springframework.stereotype.Component;
 
 import com.demo.fix.initiator.service.FixSessionManager;
+import com.demo.fix.initiator.service.SessionDictionaryRegistry;
 
 import quickfix.ConfigError;
+import quickfix.DataDictionary;
 import quickfix.DefaultMessageFactory;
 import quickfix.FileLogFactory;
 import quickfix.FileStoreFactory;
@@ -46,10 +48,12 @@ public class QuickFixInitiatorService implements DisposableBean {
 	private static final String DATA_DICTIONARY_KEY = "DataDictionary";
 
 	private final FixSessionManager fixSessionManager;
+	private final SessionDictionaryRegistry dictionaryRegistry;
 	private volatile SocketInitiator initiator;
 
-	public QuickFixInitiatorService(FixSessionManager fixSessionManager) {
+	public QuickFixInitiatorService(FixSessionManager fixSessionManager, SessionDictionaryRegistry dictionaryRegistry) {
 		this.fixSessionManager = fixSessionManager;
+		this.dictionaryRegistry = dictionaryRegistry;
 	}
 
 	/**
@@ -87,6 +91,7 @@ public class QuickFixInitiatorService implements DisposableBean {
 
 		SessionSettings sessionSettings = loadSessionSettings();
 		extractDictionaries(sessionSettings);
+		populateDictionaryRegistry(sessionSettings);
 
 		MessageStoreFactory messageStoreFactory = new FileStoreFactory(sessionSettings);
 		FileLogFactory logFactory = new FileLogFactory(sessionSettings);
@@ -119,6 +124,28 @@ public class QuickFixInitiatorService implements DisposableBean {
 								+ "or add it to src/main/resources/");
 			}
 			return new SessionSettings(is);
+		}
+	}
+
+	/**
+	 * Loads a DataDictionary for each session from the path declared in the cfg
+	 * and registers it in the SessionDictionaryRegistry so that serializers can
+	 * perform session-specific tag-name and enum-description resolution.
+	 * Called after extractDictionaries() so the files are guaranteed to be on disk.
+	 */
+	private void populateDictionaryRegistry(SessionSettings sessionSettings) {
+		Iterator<SessionID> it = sessionSettings.sectionIterator();
+		while (it.hasNext()) {
+			SessionID sid = it.next();
+			try {
+				String dictPath = sessionSettings.getString(sid, DATA_DICTIONARY_KEY);
+				if (dictPath != null && !dictPath.isBlank()) {
+					dictionaryRegistry.register(sid, new DataDictionary(dictPath));
+					log.info("Registered DataDictionary for session {}: {}", sid, dictPath);
+				}
+			} catch (ConfigError e) {
+				log.warn("DataDictionary not configured for session {} — tag names will fall back to Tag<n>", sid);
+			}
 		}
 	}
 

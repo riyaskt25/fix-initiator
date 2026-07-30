@@ -8,6 +8,7 @@ import javax.xml.stream.XMLStreamWriter;
 
 import org.springframework.stereotype.Component;
 
+import quickfix.DataDictionary;
 import quickfix.Field;
 import quickfix.FieldMap;
 import quickfix.Group;
@@ -23,7 +24,7 @@ public class GroupSerializer {
 		this.enumDescriptionResolver = enumDescriptionResolver;
 	}
 
-	public void serializeGroups(XMLStreamWriter writer, FieldMap fieldMap) throws XMLStreamException {
+	public void serializeGroups(XMLStreamWriter writer, FieldMap fieldMap, DataDictionary dictionary) throws XMLStreamException {
 		Iterator<Integer> groupTagIterator = fieldMap.groupKeyIterator();
 		while (groupTagIterator.hasNext()) {
 			int groupTag = groupTagIterator.next();
@@ -32,14 +33,14 @@ public class GroupSerializer {
 				continue;
 			}
 
-			String groupName = fieldNameResolver.resolve(groupTag);
+			String groupName = fieldNameResolver.resolve(groupTag, dictionary);
 			writer.writeStartElement(groupName);
 			writer.writeAttribute("fix", String.valueOf(groupTag));
 
 			for (Group group : groups) {
 				writer.writeStartElement("groupEntry");
-				serializeFields(writer, group);
-				serializeGroups(writer, group);
+				serializeFields(writer, group, dictionary);
+				serializeGroups(writer, group, dictionary);
 				writer.writeEndElement();
 			}
 
@@ -47,17 +48,17 @@ public class GroupSerializer {
 		}
 	}
 
-	public void serializeFields(XMLStreamWriter writer, FieldMap fieldMap) throws XMLStreamException {
+	public void serializeFields(XMLStreamWriter writer, FieldMap fieldMap, DataDictionary dictionary) throws XMLStreamException {
 		Iterator<Field<?>> fields = fieldMap.iterator();
 		while (fields.hasNext()) {
 			Field<?> field = fields.next();
 			int tag = field.getTag();
 			String value = field.getObject() == null ? "" : String.valueOf(field.getObject());
-			String elementName = fieldNameResolver.resolve(tag);
+			String elementName = fieldNameResolver.resolve(tag, dictionary);
 
 			writer.writeStartElement(elementName);
 			writer.writeAttribute("fix", String.valueOf(tag));
-			String description = enumDescriptionResolver.resolve(tag, value);
+			String description = enumDescriptionResolver.resolve(tag, value, dictionary);
 			if (description != null) {
 				writer.writeAttribute("description", description);
 			}

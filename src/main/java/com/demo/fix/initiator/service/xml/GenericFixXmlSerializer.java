@@ -8,9 +8,12 @@ import javax.xml.stream.XMLStreamWriter;
 import org.springframework.stereotype.Service;
 
 import com.demo.fix.initiator.exception.FixIntegrationException;
+import com.demo.fix.initiator.service.SessionDictionaryRegistry;
 
+import quickfix.DataDictionary;
 import quickfix.FieldNotFound;
 import quickfix.Message;
+import quickfix.SessionID;
 
 @Service
 public class GenericFixXmlSerializer {
@@ -19,21 +22,31 @@ public class GenericFixXmlSerializer {
 	private final BodySerializer bodySerializer;
 	private final TrailerSerializer trailerSerializer;
 	private final XmlStreamWriterAdapter xmlStreamWriterAdapter;
+	private final SessionDictionaryRegistry dictionaryRegistry;
 
 	public GenericFixXmlSerializer(
 			HeaderSerializer headerSerializer,
 			BodySerializer bodySerializer,
 			TrailerSerializer trailerSerializer,
-			XmlStreamWriterAdapter xmlStreamWriterAdapter) {
+			XmlStreamWriterAdapter xmlStreamWriterAdapter,
+			SessionDictionaryRegistry dictionaryRegistry) {
 		this.headerSerializer = headerSerializer;
 		this.bodySerializer = bodySerializer;
 		this.trailerSerializer = trailerSerializer;
 		this.xmlStreamWriterAdapter = xmlStreamWriterAdapter;
+		this.dictionaryRegistry = dictionaryRegistry;
 	}
 
-	public String serialize(Message message) {
+	/**
+	 * Serializes a FIX message to XML using the DataDictionary registered for the
+	 * given session. Tag names and enum descriptions are resolved from that
+	 * session-specific dictionary, so sessions using different FIX variants
+	 * (e.g. standard FIX44 vs Bloomberg FIX44) are each serialized correctly.
+	 */
+	public String serialize(Message message, SessionID sessionId) {
 		String messageType = readHeaderField(message, 35);
-		String sessionKey = readHeaderField(message, 49) + "->" + readHeaderField(message, 56);
+		String sessionKey = sessionId.toString();
+		DataDictionary dictionary = dictionaryRegistry.get(sessionId);
 
 		try {
 			StringWriter output = new StringWriter();
@@ -44,11 +57,11 @@ public class GenericFixXmlSerializer {
 			writer.writeStartElement("fixMessage");
 			writer.writeCharacters("\n");
 
-			headerSerializer.serialize(writer, message.getHeader());
+			headerSerializer.serialize(writer, message.getHeader(), dictionary);
 			writer.writeCharacters("\n");
-			bodySerializer.serialize(writer, message);
+			bodySerializer.serialize(writer, message, dictionary);
 			writer.writeCharacters("\n");
-			trailerSerializer.serialize(writer, message.getTrailer());
+			trailerSerializer.serialize(writer, message.getTrailer(), dictionary);
 			writer.writeCharacters("\n");
 
 			writer.writeEndElement();
@@ -62,16 +75,12 @@ public class GenericFixXmlSerializer {
 		}
 	}
 
-	private String safeValue(String value) {
-		return value == null ? "UNKNOWN" : value;
-	}
-
 	private String readHeaderField(Message message, int tag) {
 		if (!message.getHeader().isSetField(tag)) {
 			return "UNKNOWN";
 		}
 		try {
-			return safeValue(message.getHeader().getString(tag));
+			return message.getHeader().getString(tag);
 		} catch (FieldNotFound e) {
 			return "UNKNOWN";
 		}

@@ -23,7 +23,7 @@ public class DummyXmlBrokerPublisher {
 
 	public void publish(SessionID sessionId, Message message) {
 		String messageType = readHeaderField(message, 35);
-		String xml = xmlSerializer.serialize(message);
+		String xml = xmlSerializer.serialize(message, sessionId);
 		log.info("Dummy MQ publish session={} type={} xml=\n{}", sessionId, messageType, xml);
 	}
 
